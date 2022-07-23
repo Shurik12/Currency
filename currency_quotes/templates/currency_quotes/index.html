@@ -1,0 +1,126 @@
+{% load static %}
+
+<!DOCTYPE html>
+
+<html lang="en">
+    <head>
+        <title>Currency quotes</title>
+        <link rel="stylesheet" href="https://stackpath.bootstrapcdn.com/bootstrap/4.4.1/css/bootstrap.min.css" integrity="sha384-Vkoo8x4CGsO3+Hhxv8T/Q5PaXtkKtu6ug5TOeNV6gBiFeWPGFN9MuhOf23Q9Ifjh" crossorigin="anonymous">
+        <link href="{% static 'currency_quotes/styles.css' %}" rel="stylesheet">
+    </head>
+    <script>
+      // Select all check boxes : Setting the checked property to true in checkAll() function
+     function checkAll(){
+       var items = document.getElementsByName('currency');
+         for (var i = 0; i < items.length; i++) {
+             if (items[i].type == 'checkbox')
+                 items[i].checked = true;
+         }
+     }
+     // Clear all check boxes : Setting the checked property to false in uncheckAll() function
+     function uncheckAll(){
+       var items = document.getElementsByName('currency');
+         for (var i = 0; i < items.length; i++) {
+             if (items[i].type == 'checkbox')
+                 items[i].checked = false;
+         }
+     }
+      document.addEventListener('DOMContentLoaded', function() {
+          document.querySelector('form').onsubmit = function() {
+              fetch("https://www.cbr-xml-daily.ru/daily_json.js")
+              .then(response => response.json())
+              .then(data => {
+                const Valute = data.Valute;
+                var result = `
+                  <table class="table table-striped table-dark">
+                    <thead>
+                     <tr>
+                       <th scope="col">#</th>
+                       <th scope="col">code</th>
+                       <th scope="col">name</th>
+                       <th scope="col">value</th>
+                       <th scope="col">date</th>
+                       <th scope="col">nominal</th>
+                     </tr>
+                   </thead>
+                   <tbody>
+                `;
+                var items = document.getElementsByName('currency');
+                var curr;
+                var row_number = 0;
+                for (var i = 0; i < items.length; i++) {
+                    if (items[i].type == 'checkbox' && items[i].checked == true) {
+                      row_number += 1;
+                      currency = Valute[items[i].value];
+                      result += `
+                      <tr>
+                        <th scope="row">${row_number}</th>
+                        <td><p>${currency["CharCode"]}</p></td>
+                        <td><p>${currency["Name"]}</p></td>
+                        <td><p>${currency["Value"]}</p></td>
+                        <td><p>${data["Date"]}</p></td>
+                        <td><p>${currency["Nominal"]}</p></td>
+                      </tr>
+                      `;
+                    }
+                }
+                result += `
+                    </tbody>
+                  </table>
+                `;
+                console.log(result);
+                document.querySelector('#result').innerHTML = result;
+              })
+              .catch(error => {
+                  console.log('Error:', error);
+              });
+              return false;
+          }
+      });
+    </script>
+    <body>
+        <div class="row">
+            <div class="sidebar col-lg-2 col-md-3">
+                <h2>Menu</h2>
+                <div>
+                    <a href="{% url 'index' %}">Home</a>
+                </div>
+                <a href="https://www.cbr-xml-daily.ru/">Курсы валют, API</a>
+            </div>
+            <div class="main col-lg-10 col-md-9">
+              <h1>All Pages</h1>
+
+              <form>
+                <p>Выбрать котировки:</p>
+                <table class="table">
+                  <tr>
+                    <td><p><input type="checkbox" name="currency" value="JPY"> Японских иен</p></td>
+                    <td><p><input type="checkbox" name="currency" value="USD"> Доллар США</p></td>
+                    <td><p><input type="checkbox" name="currency" value="EUR"> Евро</p></td>
+                  </tr>
+                  <tr>
+                    <td><p><input type="checkbox" name="currency" value="AUD"> Австралийский доллар</p></td>
+                    <td><p><input type="checkbox" name="currency" value="GBP"> Фунт стерлингов Соединенного королевства</p></td>
+                    <td><p><input type="checkbox" name="currency" value="BYN"> Белорусский рубль</p></td>
+                  </tr>
+                  <tr>
+                    <td><p><input type="checkbox" name="currency" value="BRL"> Бразильский реал</p></td>
+                    <td><p><input type="checkbox" name="currency" value="HKD"> Гонконгских долларов</p></td>
+                    <td><p><input type="checkbox" name="currency" value="CAD"> Канадский доллар</p></td>
+                  </tr>
+                </table>
+                <div>
+                  <button type="button" class="btn btn-primary btn-sm" value="selectAll" class="main" onclick="checkAll()">Select All</button>
+                  <button type="button" class="btn btn-primary btn-sm" value="deselectAll" class="main" onclick="uncheckAll()">Clear</button>
+                </div>
+                <p><input class="submit" type="submit" value="Получить котировки"></p>
+              </form>
+
+
+              <div id="result">
+              </div>
+            </div>
+        </div>
+
+    </body>
+</html>
