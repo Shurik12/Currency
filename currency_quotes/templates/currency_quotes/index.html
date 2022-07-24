@@ -8,7 +8,75 @@
         <link rel="stylesheet" href="https://stackpath.bootstrapcdn.com/bootstrap/4.4.1/css/bootstrap.min.css" integrity="sha384-Vkoo8x4CGsO3+Hhxv8T/Q5PaXtkKtu6ug5TOeNV6gBiFeWPGFN9MuhOf23Q9Ifjh" crossorigin="anonymous">
         <link href="{% static 'currency_quotes/styles.css' %}" rel="stylesheet">
     </head>
+    <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/1.3.4/jspdf.min.js"></script>
+    <script src="https://unpkg.com/xlsx@0.15.1/dist/xlsx.full.min.js"></script>
     <script>
+
+      // dowload to csv------------------------------------------------------------------------
+      function downloadCSVFile(csv, filename) {
+          var csv_file, download_link;
+          csv_file = new Blob([csv], {type: "text/csv"});
+          download_link = document.createElement("a");
+          download_link.download = filename;
+          download_link.href = window.URL.createObjectURL(csv_file);
+          download_link.style.display = "none";
+          document.body.appendChild(download_link);
+          download_link.click();
+      }
+      function htmlToCSV() {
+        var data = [];
+        var rows = document.querySelectorAll("table tr");
+        for (var i = 0; i < rows.length; i++) {
+          if (rows[i].attributes?.name?.value == "currency_quotes") {
+            var row = [], cols = rows[i].querySelectorAll("td, th");
+            for (var j = 0; j < cols.length; j++) {
+              row.push(cols[j].innerText);
+            }
+            data.push(row.join("\t"));
+          }
+        }
+        downloadCSVFile(data.join("\n"), "currency_quotes.csv");
+      }
+      // --------------------------------------------------------------------------------------
+
+      // dowload to xlsx-----------------------------------------------------------------------
+      function exportTableToExcel(type, fn, dl) {
+         var elt = document.getElementById('currency');
+         var wb = XLSX.utils.table_to_book(elt, { sheet: "sheet1" });
+         return dl ?
+           XLSX.write(wb, { bookType: type, bookSST: true, type: 'base64' }):
+           XLSX.writeFile(wb, fn || ('currency_quotes.' + (type || 'xlsx')));
+      }
+      // --------------------------------------------------------------------------------------
+
+      // dowload to pdf------------------------------------------------------------------------
+      function createPDF() {
+          var sTable = document.getElementById('for_pdf').innerHTML;
+
+          var style = "<style>";
+          style = style + "table {width: 100%;font: 17px Calibri;}";
+          style = style + "table, th, td {border: solid 1px #DDD; border-collapse: collapse;";
+          style = style + "padding: 2px 3px;text-align: center;}";
+          style = style + "</style>";
+
+          // CREATE A WINDOW OBJECT.
+          var win = window.open('', '', 'height=700,width=700');
+
+          win.document.write('<html><head>');
+          win.document.write('<title> Котировки валют</title>');   // <title> FOR PDF HEADER.
+          win.document.write(style);          // ADD STYLE INSIDE THE HEAD TAG.
+          win.document.write('</head>');
+          win.document.write('<body>');
+          win.document.write(sTable);         // THE TABLE CONTENTS INSIDE THE BODY TAG.
+          win.document.write('</body></html>');
+
+          win.document.close(); 	// CLOSE THE CURRENT WINDOW.
+
+          win.print();    // PRINT THE CONTENTS.
+      }
+      // -------------------------------------------------------------------------------------
+
       // Select all check boxes : Setting the checked property to true in checkAll() function
      function checkAll(){
        var items = document.getElementsByName('currency');
@@ -32,18 +100,17 @@
               .then(data => {
                 const Valute = data.Valute;
                 var result = `
-                  <table class="table table-striped table-dark">
-                    <thead>
-                     <tr>
-                       <th scope="col">#</th>
-                       <th scope="col">code</th>
-                       <th scope="col">name</th>
-                       <th scope="col">value</th>
-                       <th scope="col">date</th>
-                       <th scope="col">nominal</th>
-                     </tr>
-                   </thead>
-                   <tbody>
+                  <div id="for_pdf">
+                    <table id="currency" class="table table-striped table-dark">
+                      <tbody>
+                       <tr name="currency_quotes">
+                         <th scope="col">#</th>
+                         <th scope="col">code</th>
+                         <th scope="col">name</th>
+                         <th scope="col">value</th>
+                         <th scope="col">date</th>
+                         <th scope="col">nominal</th>
+                       </tr>
                 `;
                 var items = document.getElementsByName('currency');
                 var curr;
@@ -53,8 +120,8 @@
                       row_number += 1;
                       currency = Valute[items[i].value];
                       result += `
-                      <tr>
-                        <th scope="row">${row_number}</th>
+                      <tr name="currency_quotes">
+                        <td scope="row">${row_number}</td>
                         <td><p>${currency["CharCode"]}</p></td>
                         <td><p>${currency["Name"]}</p></td>
                         <td><p>${currency["Value"]}</p></td>
@@ -65,10 +132,13 @@
                     }
                 }
                 result += `
-                    </tbody>
-                  </table>
+                      </tbody>
+                    </table>
+                  </div>
+                  <button id="generatePDF" onclick="createPDF()">Скачать в PDF</button>
+                  <button id="htmlToCSV" onclick="htmlToCSV()">Скачать в CSV</button>
+                  <button id="htmlToXlSX" onclick="exportTableToExcel('xlsx')">Скачать в XLSX</button>
                 `;
-                console.log(result);
                 document.querySelector('#result').innerHTML = result;
               })
               .catch(error => {
@@ -79,16 +149,16 @@
       });
     </script>
     <body>
-        <div class="row">
+        <div id="htmlContent" class="row">
             <div class="sidebar col-lg-2 col-md-3">
-                <h2>Menu</h2>
+                <h2>Меню</h2>
                 <div>
-                    <a href="{% url 'index' %}">Home</a>
+                    <a href="{% url 'index' %}">Стартовая страница</a>
                 </div>
                 <a href="https://www.cbr-xml-daily.ru/">Курсы валют, API</a>
             </div>
             <div class="main col-lg-10 col-md-9">
-              <h1>All Pages</h1>
+              <h1>Котировки валют</h1>
 
               <form>
                 <p>Выбрать котировки:</p>
@@ -110,17 +180,14 @@
                   </tr>
                 </table>
                 <div>
-                  <button type="button" class="btn btn-primary btn-sm" value="selectAll" class="main" onclick="checkAll()">Select All</button>
-                  <button type="button" class="btn btn-primary btn-sm" value="deselectAll" class="main" onclick="uncheckAll()">Clear</button>
+                  <button type="button" class="btn btn-primary btn-sm" value="selectAll" class="main" onclick="checkAll()">Выбтрать все</button>
+                  <button type="button" class="btn btn-primary btn-sm" value="deselectAll" class="main" onclick="uncheckAll()">Очистить</button>
                 </div>
                 <p><input class="submit" type="submit" value="Получить котировки"></p>
               </form>
-
-
               <div id="result">
               </div>
             </div>
         </div>
-
     </body>
 </html>
